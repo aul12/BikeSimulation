@@ -52,11 +52,16 @@ for i in range(len(ds)):
 
 total_time = 0
 total_distance = 0
+work = 0
 for d, delta_h, P, t, v in zip(ds, delta_hs, Ps, ts, vs):
     print(
         f"Segment length: {d}m, Altitude Diff {delta_h}m ({delta_h / d * 100}%), Power {P}W, Time: {t}s, Speed: {v * 3.6}km/h")
     total_time += t
     total_distance += d
+    work += P * t
 
 print(
-    f"Total time: {datetime.timedelta(seconds=total_time)}, Total distance: {total_distance / 1000}km, Avg. Speed: {total_distance / total_time * 3.6}km/h")
+    f"Total time: {datetime.timedelta(seconds=total_time)}, "
+    f"Total distance: {total_distance / 1000}km, "
+    f"Avg. Speed: {total_distance / total_time * 3.6}km/h, "
+    f"Work: {work/1000}kJ ({work/total_time}W Avg)")
