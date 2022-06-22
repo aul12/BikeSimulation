@@ -46,41 +46,6 @@ class Simulation:
             self.ts.append(t)
             last_velocity = v
 
-    def dvelocity_dpower(self, Ps: list, params: dict, initial_velocity=5):
-        assert len(Ps) == len(self.ds)
-        self.Ps = Ps
-
-        rho = params["rho"]
-        CdA = params["CdA"]
-        Crr = params["Crr"]
-        m = params["m"]
-        g = params["g"]
-
-        last_velocity = initial_velocity
-
-        dvelocity_dpowers = []
-
-        for i in range(len(self.Ps)):
-            delta_h = self.delta_hs[i]
-            d = self.ds[i]
-            P = self.Ps[i]
-
-            while True:
-                arg = -2 * g * delta_h + last_velocity ** 2 - 1 / m * rho * last_velocity ** 2 * CdA * d - 2 * g * Crr + P * 2 * d / (
-                        m * last_velocity)
-                if arg >= 0:
-                    break
-                else:
-                    self.Ps[i] += 10
-
-            dvelocity_dpower = 1 / (2 * math.sqrt(arg)) * (2 * d / (m * last_velocity))
-            dvelocity_dpowers.append(dvelocity_dpower)
-
-            v = math.sqrt(arg)
-            last_velocity = v
-
-        return dvelocity_dpowers
-
     def get_total_time(self):
         total_time = 0
         for t in self.ts:

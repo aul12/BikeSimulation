@@ -1,5 +1,5 @@
-# Optimal Bike Split
-Definitely not a copy of bestbikesplit.
+# Bike Simulation
+Simulation of bike dynamics
 
 # Theory
 A given route is split into segments (for example between GPX waypoints),
