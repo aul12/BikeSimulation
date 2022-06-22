@@ -36,10 +36,10 @@ def main():
         print(f"\rCdA:\t\t\t\t\t{mid}m^2", end="")
 
     print(
-        f"\nSimulated Total time:\t{datetime.timedelta(seconds=sim.get_total_time())}s\n"
-        f"Real Total time:\t\t{datetime.timedelta(seconds=real_total_time)}s\n"
-        f"Total distance:\t\t\t{sim.get_total_distance() / 1000}km\n"
-        f"Avg. Speed:\t\t\t\t{sim.get_average_speed() * 3.6}km/h\n")
+        f"\nSimulated Total time:\t{datetime.timedelta(seconds=sim.get_total_time())}\n"
+        f"Real Total time:\t\t{datetime.timedelta(seconds=real_total_time)}\n"
+        f"Total distance:\t\t\t{sim.get_total_distance() / 1000:.3f}km\n"
+        f"Avg. Speed:\t\t\t\t{sim.get_average_speed() * 3.6:.1f}km/h\n")
 
 
 if __name__ == "__main__":
