@@ -1,8 +1,6 @@
 import datetime
 
-import gpxpy
-import geopy.distance
-
+import GpxReader
 import Simulation
 
 params = {
@@ -13,25 +11,8 @@ params = {
     "g": 9.81,
 }
 
-gpx_file = open('Hagebuchen.gpx', 'r')
-gpx = gpxpy.parse(gpx_file)
-assert len(gpx.tracks) == 1
-assert len(gpx.tracks[0].segments) == 1
-points = gpx.tracks[0].segments[0].points
-
-ds = []
-delta_hs = []
-Ps = []
-
-last_pt = points[0]
-for point in points[1:]:
-    d = geopy.distance.geodesic((last_pt.latitude, last_pt.longitude), (point.latitude, point.longitude)).m
-    if d > 0:
-        ds.append(d)
-        delta_hs.append(point.elevation - last_pt.elevation)
-        Ps.append(300)
-
-    last_pt = point
+ds, delta_hs = GpxReader.read_gpx("Hagebuchen.gpx")
+Ps = [300] * len(ds)
 
 sim = Simulation.Simulation(ds, delta_hs)
 sim.forward(Ps, params)
