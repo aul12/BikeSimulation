@@ -1,5 +1,4 @@
 import fitparse
-import geopy.distance
 
 
 def read_fit(fname):

@@ -1,37 +1,46 @@
 import datetime
+import argparse
 
 from lib import FitReader, Simulation, ParamReader
 
-target = 300
 
-params = ParamReader.read_params("params.json")
-ds, delta_hs, Ps, real_total_time = FitReader.read_fit("Gz_Ns.fit")
+def main():
+    parser = argparse.ArgumentParser("Estimate the CdA from a .fit File")
+    parser.add_argument("file", metavar="F", type=str,
+                        help="The fit file, needs to include distance, power and altitude")
+    parser.add_argument("--params", dest="params", type=str, help="Params file", default="params.json")
+    parser.add_argument("--resolution", dest="resolution", type=float, help="Required resolution of the CdA",
+                        default=0.001)
+    args = parser.parse_args()
 
-sim = Simulation.Simulation(ds, delta_hs)
+    params = ParamReader.read_params(args.params)
+    ds, delta_hs, Ps, real_total_time = FitReader.read_fit(args.file)
+
+    sim = Simulation.Simulation(ds, delta_hs)
+
+    lower_bound = 0
+    upper_bound = 1
+
+    while abs(upper_bound - lower_bound) > args.resolution:
+        mid = (upper_bound + lower_bound) / 2
+        params["CdA"] = mid
+
+        sim.forward(Ps, params)
+
+        if sim.get_total_time() > real_total_time:
+            # reduce cda
+            upper_bound = mid
+        else:
+            lower_bound = mid
+
+        print(f"\rCdA:\t\t\t\t\t{mid}m^2", end="")
+
+    print(
+        f"\nSimulated Total time:\t{datetime.timedelta(seconds=sim.get_total_time())}s\n"
+        f"Real Total time:\t\t{datetime.timedelta(seconds=real_total_time)}s\n"
+        f"Total distance:\t\t\t{sim.get_total_distance() / 1000}km\n"
+        f"Avg. Speed:\t\t\t\t{sim.get_average_speed() * 3.6}km/h\n")
 
 
-lower_bound = 0
-upper_bound = 1
-
-while abs(upper_bound-lower_bound) > 0.0001:
-    mid = (upper_bound+lower_bound)/2
-    params["CdA"] = mid
-
-    sim.forward(Ps, params)
-
-    if sim.get_total_time() > real_total_time:
-        # reduce cda
-        upper_bound = mid
-    else:
-        lower_bound = mid
-
-    print(f"Trying CdA: {mid} (upper: {upper_bound}, lower: {lower_bound})")
-
-
-print(
-    f"Simulated Total time: {datetime.timedelta(seconds=sim.get_total_time())}, "
-    f"Real Total time: {datetime.timedelta(seconds=real_total_time)}, "
-    f"Total distance: {sim.get_total_distance() / 1000}km, "
-    f"Avg. Speed: {sim.get_average_speed() * 3.6}km/h, "
-    f"Work: {sim.get_total_work() / 1000}kJ ({sim.get_average_power()}W Avg),"
-    f"Vertical: +{sim.get_vertical_meters()[0]}, -{sim.get_vertical_meters()[1]}")
+if __name__ == "__main__":
+    main()
