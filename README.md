@@ -1,7 +1,11 @@
 # Bike Simulation
-Simulation of bike dynamics
+Physics based simulation of bike velocity considering climbing, aerodynamics
+and rolling resistance. Enables the calculation of many values:
+ * Time/Speed for a given route with given power
+ * CdA from a recorded activity
+ * **TODO**: Optimal pacing
 
-# Theory
+## Theory
 A given route is split into segments (for example between GPX waypoints),
 for every segment a constant power and constant gradient is assumed.
 Given the velocity at the beginning of the segment and the power the velocity
@@ -9,7 +13,7 @@ at the end of the segment can be calculated. This gives the time for each
 segment and thus the overall time. This overall time is minimized with respect
 to the power, constraining the average power to the desired value.
 
-## Physics
+### Physics
 There are four important losses to consider: climbing, accelerating,
 aerodynamic drag and rolling resistance. All energy that is produced is given by the rider, this allows to formulate
 the dynamics using the laws of energy conservation:
@@ -63,8 +67,8 @@ $$
 
 which then allows for the calculation of $t$ and thus the overall time.
 
-## Nomenclature
-### Variables
+### Nomenclature
+#### Variables
  * $v_{k-1}$: velocity when entering the segment
  * $v_k$: velocity when leaving the segment
  * $d$: distance of the segment
@@ -73,7 +77,7 @@ which then allows for the calculation of $t$ and thus the overall time.
  * $P$: Power
  * $W$: Work
 
-### Parameters
+#### Parameters
  * $\rho$: Air Density
  * $CdA$: Effective frontal area (frontal area times coefficient of drag)
  * $Crr$: Coefficient of rolling resistance
