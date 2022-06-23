@@ -34,9 +34,6 @@ def main():
         else:
             upper_bound = mid
 
-        print(sim.get_total_time(), real_total_time)
-        print(f"\rPower:\t\t\t\t\t{mid}W")#, end="")
-
     print(
         f"\nSimulated Total time:\t{datetime.timedelta(seconds=sim.get_total_time())}\n"
         f"Real Total time:\t\t{datetime.timedelta(seconds=real_total_time)}\n"
