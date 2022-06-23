@@ -3,7 +3,8 @@ Physics based simulation of bike velocity considering climbing, aerodynamics
 and rolling resistance. Enables the calculation of many values:
  * Time/Speed for a given route with given power
  * CdA from a recorded activity
- * **TODO**: Optimal pacing
+ * **TODO:** Power estimation
+ * **TODO:** Optimal pacing
 
 ## Theory
 A given route is split into segments (for example between GPX waypoints),
