@@ -1,4 +1,5 @@
 import math
+import sympy
 
 
 class Simulation:
@@ -11,19 +12,26 @@ class Simulation:
         self.Ps = []
         self.ts = []
 
-    def forward(self, Ps: list, params: dict, initial_velocity=5):
-        assert len(Ps) == len(self.ds)
-        self.Ps = Ps
-        self.vs = []
-        self.ts = []
-
+    def get_velocity(self, last_velocity, P, d, delta_h, params):
         rho = params["rho"]
         CdA = params["CdA"]
         Crr = params["Crr"]
         m = params["m"]
         g = params["g"]
 
-        last_velocity = initial_velocity
+        arg = -2 * g * delta_h + last_velocity ** 2 - 1 / m * rho * last_velocity ** 2 * CdA * d - 2 * g * Crr + P * 2 * d / (
+                m * last_velocity)
+
+        if isinstance(arg, sympy.Expr):
+            return sympy.sqrt(arg)
+        else:
+            return math.sqrt(arg)
+
+    def forward(self, Ps: list, params: dict, initial_velocity=5):
+        assert len(Ps) == len(self.ds)
+        self.Ps = Ps
+        self.vs = [initial_velocity]
+        self.ts = []
 
         for i in range(len(self.Ps)):
             delta_h = self.delta_hs[i]
@@ -31,20 +39,19 @@ class Simulation:
             P = self.Ps[i]
 
             while True:
-                arg = -2 * g * delta_h + last_velocity ** 2 - 1 / m * rho * last_velocity ** 2 * CdA * d - 2 * g * Crr + P * 2 * d / (
-                        m * last_velocity)
-                if arg >= 0:
-                    break
-                else:
+                try:
+                    v = self.get_velocity(self.vs[-1], P, d, delta_h, params)
+                except ValueError:
+                    # Overpower required
                     self.Ps[i] += 10
                     P = self.Ps[i]
+                    continue
+                break
 
-            v = math.sqrt(arg)
-            t = d / last_velocity
+            t = d / self.vs[-1]
 
             self.vs.append(v)
             self.ts.append(t)
-            last_velocity = v
 
     def get_total_time(self):
         total_time = 0
