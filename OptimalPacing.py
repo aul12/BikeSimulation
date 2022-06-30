@@ -1,10 +1,14 @@
 import argparse
+import copy
 import datetime
 import math
 
+import matplotlib.pyplot as plt
+import numpy
+
 import sympy
 
-from lib import GpxReader, Simulation, ParamReader
+from lib import GpxReader, FitReader, Simulation, ParamReader, RouteNormalization
 
 
 def main():
@@ -18,12 +22,12 @@ def main():
 
     params = ParamReader.read_params(args.params)
     ds, delta_hs = GpxReader.read_gpx(args.file)
+    ds, delta_hs = RouteNormalization.normalize(ds, delta_hs, segment_len=2)
+
+    init_velocity = 5
 
     sim = Simulation.Simulation(ds, delta_hs)
-    sim.Ps = [args.power] * len(ds)
-
-    sim.forward(sim.Ps, params)
-    last_time = sim.get_total_time()
+    sim.forward([args.power] * len(ds), initial_velocity=init_velocity, params=params)
 
     # System description:
     #   v_{t+1} = f(v_t, P_t)
@@ -36,12 +40,23 @@ def main():
     state_cost_sym = d_t / v_t
     q_t_sym = state_cost_sym.diff(v_t)
 
+    control_cost_sym = P_t * 0
+    r_t_sym = control_cost_sym.diff(P_t)
+
     for c in range(10):
+        print(f"\r{c}", end="")
         # Back pass
-        cost = 0
+        cost = float(q_t_sym.evalf(subs={
+            v_t: sim.vs[-1],
+            P_t: sim.Ps[-1],
+            d_t: ds[-1],
+            delta_h_t: delta_hs[-1]
+        }))
         steps = [0] * len(ds)
 
-        for t in range(len(ds) - 1, 0, -1):
+        for i in range(len(ds)):
+            t = len(ds) - i - 1
+
             bindings = {
                 v_t: sim.vs[t],
                 P_t: sim.Ps[t],
@@ -52,41 +67,54 @@ def main():
             a_t = float(a_t_sym.evalf(subs=bindings))
             b_t = float(b_t_sym.evalf(subs=bindings))
             q_t = float(q_t_sym.evalf(subs=bindings))
+            r_t = float(r_t_sym.evalf(subs=bindings))
 
-            steps[t] = -(q_t * b_t)
+            steps[t] = -(r_t + cost * b_t)
             cost = q_t + cost * a_t
 
         # Line search
-        alpha = 100
-        old_Ps = sim.Ps
-        while True:
-            Ps = []
+        best_time = math.inf
+        old_Ps = copy.deepcopy(sim.Ps)
+        best_powers = None
+
+        for alpha_exp in range(-6, 3):
+            alpha = 10 ** alpha_exp
             for t in range(len(ds)):
-                Ps.append(old_Ps[t] + alpha * steps[t])
-            sim.forward(Ps, params)
+                sim.Ps[t] = old_Ps[t] + alpha * steps[t]
+            sim.forward(sim.Ps, params, initial_velocity=init_velocity)
 
             power_scale = args.power / sim.get_average_power()
             for t in range(len(ds)):
                 sim.Ps[t] *= power_scale
-            sim.forward(sim.Ps, params)
+            sim.forward(sim.Ps, params, initial_velocity=init_velocity)
 
-            if sim.get_total_time() < last_time:
-                break
-            else:
-                alpha /= 10
-                if alpha < 1e-6:
-                    print("Line search broken")
+            if sim.get_total_time() < best_time:
+                best_time = sim.get_total_time()
+                best_powers = copy.deepcopy(sim.Ps)
 
-        print(
-            f"\nTotal time:\t\t{datetime.timedelta(seconds=int(sim.get_total_time()))}\n"
-            f"Total distance:\t{sim.get_total_distance() / 1000:.3f}km\n"
-            f"Avg. Speed:\t\t{sim.get_average_speed() * 3.6:.1f}km/h\n"
-            f"Work:\t\t\t{sim.get_total_work() / 1000:.0f}kJ ({sim.get_average_power():.0f}W Avg)\n"
-            f"Vertical:\t\t+{sim.get_vertical_meters()[0]:.0f}m, -{sim.get_vertical_meters()[1]:.0f}m")
+        sim.forward(copy.deepcopy(best_powers), params=params)
+
+    print(
+        f"\nTotal time:\t\t{datetime.timedelta(seconds=int(sim.get_total_time()))}\n"
+        f"Total distance:\t{sim.get_total_distance() / 1000:.3f}km\n"
+        f"Avg. Speed:\t\t{sim.get_average_speed() * 3.6:.1f}km/h\n"
+        f"Work:\t\t\t{sim.get_total_work() / 1000:.0f}kJ ({sim.get_average_power():.0f}W Avg)\n"
+        f"Vertical:\t\t+{sim.get_vertical_meters()[0]:.0f}m, -{sim.get_vertical_meters()[1]:.0f}m")
 
     print("\nPacing Plan:")
     for t in range(len(ds)):
-        print(f"{sim.ts[t]:.0f}s ({sim.ds[t]:.0f}m) at {sim.Ps[t]:.0f}W ({sim.delta_hs[t] / sim.ds[t] * 100:.1f}%)")
+        print(f"{sim.ts[t]:.0f}s ({sim.ds[t]:.0f}m) at {sim.Ps[t]:.0f}W ({sim.delta_hs[t] / sim.ds[t] * 100:.1f}%, "
+              f"{sim.vs[t] * 3.6:.1f}km/h)")
+
+    hs = [0]
+    for delta_h in delta_hs:
+        hs.append(hs[-1] + delta_h)
+
+    plt.plot(sim.vs, label="Speed", color="red")
+    plt.plot(sim.Ps, label="Power", color="green")
+    plt.plot(hs, color="black")
+    plt.legend()
+    plt.show()
 
 
 if __name__ == "__main__":
