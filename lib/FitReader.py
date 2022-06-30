@@ -7,11 +7,11 @@ def read_fit(fname):
     ds = []
     delta_hs = []
     ps = []
+    ts = []
 
     records = fitfile.get_messages("record")
 
     last_alt = None
-    initial_timestamp = None
     last_timestamp = None
     total_distance = None
 
@@ -26,13 +26,11 @@ def read_fit(fname):
                 ds.append(dist - total_distance)
                 delta_hs.append(alt - last_alt)
                 ps.append(power)
-                last_timestamp = stamp
-            else:
-                initial_timestamp = stamp
+                ts.append((stamp - last_timestamp).total_seconds())
 
             total_distance = dist
 
             last_alt = alt
+            last_timestamp = stamp
 
-    time = (last_timestamp - initial_timestamp).total_seconds()
-    return ds, delta_hs, ps, time
+    return ds, delta_hs, ps, ts

@@ -14,7 +14,15 @@ def main():
     args = parser.parse_args()
 
     params = ParamReader.read_params(args.params)
-    ds, delta_hs, Ps, real_total_time = FitReader.read_fit(args.file)
+    ds, delta_hs, Ps, ts = FitReader.read_fit(args.file)
+
+    real_total_time = 0
+    real_total_time_zero_power = 0
+    for t in range(len(ts)):
+        real_total_time += ts[t]
+        if Ps[t] < 10:
+            real_total_time_zero_power += ts[t]
+    real_relevant_time = real_total_time - real_total_time_zero_power
 
     sim = Simulation.Simulation(ds, delta_hs)
 
@@ -27,7 +35,15 @@ def main():
 
         sim.forward(Ps, params)
 
-        if sim.get_total_time() > real_total_time:
+        sim_total_time = 0
+        sim_total_time_zero_power = 0
+        for t in range(len(sim.ts)):
+            sim_total_time += sim.ts[t]
+            if Ps[t] < 10:
+                sim_total_time_zero_power += sim.ts[t]
+        sim_relevant_time = sim_total_time - sim_total_time_zero_power
+
+        if sim_relevant_time > real_relevant_time:
             # reduce cda
             upper_bound = mid
         else:
