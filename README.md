@@ -4,7 +4,7 @@ and rolling resistance. Enables the calculation of many values:
  * Time/Speed for a given route with given power
  * CdA from a recorded activity
  * Power estimation from a time for a given segment
- * **TODO:** Optimal pacing
+ * Optimal pacing (requires precise elevation profile)
 
 ## Theory
 A given route is split into segments (for example between GPX waypoints),

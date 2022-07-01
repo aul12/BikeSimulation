@@ -2,9 +2,9 @@ import argparse
 import copy
 import datetime
 import math
+import sys
 
 import matplotlib.pyplot as plt
-import numpy
 
 import sympy
 
@@ -21,8 +21,14 @@ def main():
     args = parser.parse_args()
 
     params = ParamReader.read_params(args.params)
-    ds, delta_hs = GpxReader.read_gpx(args.file)
-    ds, delta_hs = RouteNormalization.normalize(ds, delta_hs, segment_len=2)
+    if args.file.endswith(".gpx"):
+        ds, delta_hs = GpxReader.read_gpx(args.file)
+    elif args.file.endswith(".fit"):
+        ds, delta_hs, _, _ = FitReader.read_fit(args.file)
+    else:
+        print("Unknown file format!")
+        sys.exit(1)
+    ds, delta_hs = RouteNormalization.normalize(ds, delta_hs, segment_len=10)
 
     init_velocity = 5
 

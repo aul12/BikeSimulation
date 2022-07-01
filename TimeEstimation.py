@@ -1,7 +1,8 @@
 import argparse
 import datetime
+import sys
 
-from lib import GpxReader, Simulation, ParamReader
+from lib import GpxReader, FitReader, Simulation, ParamReader
 
 
 def main():
@@ -14,7 +15,13 @@ def main():
     args = parser.parse_args()
 
     params = ParamReader.read_params(args.params)
-    ds, delta_hs = GpxReader.read_gpx(args.file)
+    if args.file.endswith(".gpx"):
+        ds, delta_hs = GpxReader.read_gpx(args.file)
+    elif args.file.endswith(".fit"):
+        ds, delta_hs, _, _ = FitReader.read_fit(args.file)
+    else:
+        print("Unknown file format!")
+        sys.exit(1)
 
     sim = Simulation.Simulation(ds, delta_hs)
     sim.Ps = [args.power] * len(ds)
