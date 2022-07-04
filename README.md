@@ -41,21 +41,18 @@ $$
 P_\text{Roll} = m g Crr v(t)
 $$
 
-The time is given by the distance of the segment and the average velocity
+The power of the rider over the segment is assumed to be constant:
+
+$$
+P_\text{Rider}(t) = P
+$$
+
 
 Combining all of the equations from above one arrives at:
 
 $$
-m g \Delta h + \frac{1}{2} m (v_k^2 - v_{k-1}^2) +  \frac{1}{2} \rho v_{k-1}^2 CdA d +  m g Crr = P \frac{d}{v_{k-1}}
+m g \frac{\Delta h}{d} v(t) + m v(t) \dot{v(t)} + \frac{1}{2} \rho {v(t)}^3 CdA + m g Crr v(t) = P
 $$
-
-which can be solved for $v_k$:
-
-$$ 
-\sqrt{-2 g \Delta h + v_{k-1}^2 - \frac{1}{m} \rho v_{k-1}^2 CdA d - 2 g Crr + P \frac{2 d}{m v_{k-1}}} = v_k
-$$
-
-which then allows for the calculation of $t$ and thus the overall time.
 
 ### Nomenclature
 #### Variables
