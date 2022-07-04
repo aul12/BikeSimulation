@@ -16,43 +16,32 @@ to the power, constraining the average power to the desired value.
 
 ### Physics
 There are four important losses to consider: climbing, accelerating,
-aerodynamic drag and rolling resistance. All energy that is produced is given by the rider, this allows to formulate
+aerodynamic drag and rolling resistance. All power that is produced is given by the rider, this allows to formulate
 the dynamics using the laws of energy conservation:
 
 $$
-W_\text{Climbing} + W_\text{Accelerating} + W_\text{Drag} + W_\text{Roll} = W_\text{Rider}
+P_\text{Climbing}(t) + P_\text{Accelerating}(t) + P_\text{Drag}(t) + P_\text{Roll}(t) = P_\text{Rider}(t)
 $$
 
-The energy spent for each of the losses is given by (for the drag and time calculation the velocity at the beginning at the segment is taken,
-if the difference in velocity in the segment is large this approximation might yield problems):
+The power lost for each of the losses is given by:
 
 $$
-W_\text{Climbing} = m g \Delta h
-$$
-
-$$
-W_\text{Accelerating} = \frac{1}{2} m (v_k^2 - v_{k-1}^2)
+P_\text{Climbing} = m g \dot{h(t)} = m g \frac{\Delta h}{d} v(t)
 $$
 
 $$
-W_\text{Drag} = \frac{1}{2} \rho v_{k-1}^2 CdA d
+P_\text{Accelerating} = m v(t) \dot{v(t)}
 $$
 
 $$
-W_\text{Roll} = m g Crr
+P_\text{Drag} = \frac{1}{2} \rho {v(t)}^3 CdA
 $$
 
-The energy injected into the system is given by the power produced by the rider over the duration:
-
 $$
-W_\text{Rider} = P t
+P_\text{Roll} = m g Crr v(t)
 $$
 
-the time is given by the distance of the segment and the average velocity
-
-$$
-t = \frac{d}{v_{k-1}}
-$$
+The time is given by the distance of the segment and the average velocity
 
 Combining all of the equations from above one arrives at:
 
