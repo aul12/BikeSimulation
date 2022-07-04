@@ -55,6 +55,7 @@ m g \frac{\Delta h}{d} v(t) + m v(t) \dot{v(t)} + \frac{1}{2} \rho {v(t)}^3 CdA 
 $$
 
 which can be reformulated as
+
 $$
 m g (\frac{\Delta h}{d} + Crr) v(t) + m v(t) \dot{v(t)} + \frac{1}{2} \rho CdA {v(t)}^3 - P = 0
 $$
