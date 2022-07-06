@@ -1,5 +1,7 @@
 {
-  "rho": 1.2041,
+  "temperature": 20,
+  "pressure": 1023,
+  "pressure_norm": 1013.25,
   "CdA": 0.25,
   "Crr": 0.002845,
   "m": 72,
