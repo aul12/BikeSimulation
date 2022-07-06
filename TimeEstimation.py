@@ -27,6 +27,8 @@ def main():
     sim.Ps = [args.power] * len(ds)
     sim.forward(sim.Ps, params)
 
+    sim.plot(show_speed=True, show_elevation=True)
+
     print(
         f"Total time:\t\t{datetime.timedelta(seconds=sim.get_total_time())}\n"
         f"Total distance:\t{sim.get_total_distance() / 1000:.3f}km\n"

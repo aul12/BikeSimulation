@@ -1,5 +1,6 @@
 import math
 import sympy
+import matplotlib.pyplot as plt
 
 
 class Simulation:
@@ -90,3 +91,39 @@ class Simulation:
                 vert_neg -= delta_h
 
         return vert_pos, vert_neg
+
+    def plot(self, show_speed=False, show_power=False, show_elevation=False):
+        xs = [0]
+        for x in self.ds:
+            xs.append(xs[-1] + x / 1000)
+
+        fig, ax1 = plt.subplots()
+        ax2 = ax1.twinx()
+
+        assert show_speed or show_power
+
+        if show_speed:
+            vs_kmh = [v * 3.6 for v in self.vs]
+            ax1.plot(xs, vs_kmh, color="green")
+            ax1.set_ylabel("Speed (km/h)", color="green")
+
+        if show_power:
+            ax2.plot(xs[1:], self.Ps, color="red")
+            ax2.set_ylabel("Power (W)", color="red")
+
+        if show_elevation:
+            hs = [0]
+            for delta_h in self.delta_hs:
+                hs.append(hs[-1] + delta_h)
+
+            ax = ax1 if show_speed else ax2
+            min_y, max_y = ax.get_ylim()
+
+            min_h = min(hs)
+            max_h = max(hs)
+
+            hs = [(h - min_h) / (max_h - min_h) * (max_y - min_y) + min_y for h in hs]
+
+            ax.plot(xs, hs, color="gray")
+
+        plt.show()

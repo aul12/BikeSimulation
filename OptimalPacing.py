@@ -4,8 +4,6 @@ import datetime
 import math
 import sys
 
-import matplotlib.pyplot as plt
-
 import sympy
 
 from lib import GpxReader, FitReader, Simulation, ParamReader, RouteNormalization, ElevationSmoothing
@@ -18,14 +16,22 @@ def main():
     parser.add_argument("--params", dest="params", type=str, help="Params file", default="params.json")
     parser.add_argument("--power", dest="power", type=float, help="Average Power (in Watts) for the course",
                         default=300)
+    parser.add_argument("--max_power", dest="max_power", type=float, help="Max Power (in Watts) for the course",
+                        default=700)
     parser.add_argument("--segment_len", dest="segment_len", type=float, help="Length of a segment over which constant"
                                                                               "power is assumed", default=1)
     parser.add_argument("--elevation_smooth_window", dest="elevation_smooth_window", type=float,
-                        help="Size of the window used for elevation smoothing", default=100)
+                        help="Size of the window used for elevation smoothing", default=50)
     parser.add_argument("--elevation_smooth_std_dev", dest="elevation_smooth_std_dev", type=float,
-                        help="Standard deviation of the kernel used for elevation smoothing", default=100)
+                        help="Standard deviation of the kernel used for elevation smoothing", default=50)
     parser.add_argument("--initial_velocity", dest="init_vel", type=float,
                         help="Initial velocity (in m/s), needs to be positive", default=5)
+    parser.add_argument("--max_iterations", dest="max_iterations", type=int,
+                        help="Maximum optimizer iterations", default=100)
+    parser.add_argument("--power_tolerance", dest="power_tolerance", type=float,
+                        help="Maximum deviation from average to accept pacing strategy", default=5)
+    parser.add_argument("--time_tolerance", dest="time_tolerance", type=float,
+                        help="Improvement in time at which to stop optimization", default=0.5)
 
     args = parser.parse_args()
 
@@ -60,10 +66,7 @@ def main():
     state_cost_sym = d_t / v_t
     q_t_sym = state_cost_sym.diff(v_t)
 
-    control_cost_sym = P_t * 0
-    r_t_sym = control_cost_sym.diff(P_t)
-
-    for c in range(500):
+    for c in range(args.max_iterations):
         # Back pass
         cost = float(q_t_sym.evalf(subs={
             v_t: sim.vs[-1],
@@ -86,21 +89,19 @@ def main():
             a_t = float(a_t_sym.evalf(subs=bindings))
             b_t = float(b_t_sym.evalf(subs=bindings))
             q_t = float(q_t_sym.evalf(subs=bindings))
-            r_t = float(r_t_sym.evalf(subs=bindings))
 
-            steps[t] = -(r_t + cost * b_t)
+            steps[t] = -(cost * b_t)
             cost = q_t + cost * a_t
 
         # Line search
         best_time = math.inf
         old_Ps = copy.deepcopy(sim.Ps)
         best_powers = None
-        best_alpha = None
 
         for alpha_exp in range(-10, 6):
             alpha = 10 ** alpha_exp
             for t in range(len(ds)):
-                sim.Ps[t] = min(max(old_Ps[t] + alpha * steps[t], 0), 1000)
+                sim.Ps[t] = min(max(old_Ps[t] + alpha * steps[t], 0), args.max_power)
             sim.forward(sim.Ps, params, initial_velocity=init_velocity)
 
             power_scale = args.power / sim.get_average_power()
@@ -111,15 +112,15 @@ def main():
             if sim.get_total_time() < best_time:
                 best_time = sim.get_total_time()
                 best_powers = copy.deepcopy(sim.Ps)
-                best_alpha = alpha
 
         sim.forward(copy.deepcopy(best_powers), params=params)
 
-        if abs(sim.get_total_time() - last_time) < 0.1 and sim.get_average_power() < args.power + 5:
+        if abs(sim.get_total_time() - last_time) < args.time_tolerance \
+                and sim.get_average_power() < args.power + args.power_tolerance:
             break
         else:
             last_time = sim.get_total_time()
-            print(f"\r[Step {c+1}]\tTotal time:\t\t{datetime.timedelta(seconds=int(last_time))}", end="")
+            print(f"\r[Step {c + 1}]\tTotal time:\t\t{datetime.timedelta(seconds=int(last_time))}", end="")
 
     print(
         f"\rTotal time:\t\t{datetime.timedelta(seconds=int(last_time))}\n"
@@ -130,18 +131,10 @@ def main():
 
     print("\nPacing Plan:")
     for t in range(len(ds)):
-        print(f"{sim.ts[t]:.0f}s ({sim.ds[t]:.0f}m) at {sim.Ps[t]:.0f}W ({sim.delta_hs[t] / sim.ds[t] * 100:.1f}%, "
+        print(f"{sim.ts[t]:.1f}s ({sim.ds[t]:.0f}m) at {sim.Ps[t]:.0f}W ({sim.delta_hs[t] / sim.ds[t] * 100:.1f}%, "
               f"{sim.vs[t] * 3.6:.1f}km/h)")
 
-    hs = [0]
-    for delta_h in delta_hs:
-        hs.append(hs[-1] + delta_h)
-
-    plt.plot(sim.vs, label="Speed", color="red")
-    plt.plot(sim.Ps, label="Power", color="green")
-    plt.plot(hs, color="black")
-    plt.legend()
-    plt.show()
+    sim.plot(show_speed=True, show_power=True, show_elevation=True)
 
 
 if __name__ == "__main__":
