@@ -8,10 +8,10 @@ and rolling resistance. Enables the calculation of many values:
 
 ## Theory
 A given route is split into segments (for example between GPX waypoints),
-for every segment a constant power and constant gradient is assumed.
+for every segment a constant gradient is assumed.
 Given the velocity at the beginning of the segment and the power the velocity
-at the end of the segment can be calculated. This gives the time for each
-segment and thus the overall time. This overall time is minimized with respect
+over the segment can be calculated. This gives the time for each
+segment and thus the overall time. For the optimal pacing this overall time is minimized with respect
 to the power, constraining the average power to the desired value.
 
 ### Physics
@@ -48,7 +48,7 @@ P_\text{Rider}(t) = P
 $$
 
 
-Combining all of the equations from above one arrives at:
+Combining all the equations from above one arrives at:
 
 $$
 m g \frac{\Delta h}{d} v(t) + m v(t) \dot{v(t)} + \frac{1}{2} \rho {v(t)}^3 CdA + m g Crr v(t) = P
@@ -57,7 +57,7 @@ $$
 which can be reformulated as
 
 $$
-m g (\frac{\Delta h}{d} + Crr) v(t) + m v(t) \dot{v(t)} + \frac{1}{2} \rho CdA {v(t)}^3 - P = 0
+P \frac{1}{m v(t)} - g (\frac{\Delta h}{d} + Crr) - \frac{1}{2 m} \rho CdA {v(t)}^2 = \dot{v(t)}
 $$
 
 
