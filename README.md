@@ -34,11 +34,11 @@ P_\text{Accelerating} = m v(t) \dot{v(t)}
 $$
 
 $$
-P_\text{Drag} = \frac{1}{2} \rho {v(t)}^3 CdA
+P_\text{Drag} = \frac{1}{2} \rho {v(t)}^3 C_\text{d}A
 $$
 
 $$
-P_\text{Roll} = m g Crr v(t)
+P_\text{Roll} = m g C_\text{rr} v(t)
 $$
 
 The power of the rider over the segment is assumed to be constant:
@@ -51,30 +51,29 @@ $$
 Combining all the equations from above one arrives at:
 
 $$
-m g \frac{\Delta h}{d} v(t) + m v(t) \dot{v(t)} + \frac{1}{2} \rho {v(t)}^3 CdA + m g Crr v(t) = P
+m g \frac{\Delta h}{d} v(t) + m v(t) \dot{v(t)} + \frac{1}{2} \rho {v(t)}^3 C_\text{d}A + m g C_\text{rr} v(t) = P
 $$
 
 which can be reformulated as
 
 $$
-P \frac{1}{m v(t)} - g (\frac{\Delta h}{d} + Crr) - \frac{1}{2 m} \rho CdA {v(t)}^2 = \dot{v(t)}
+P \frac{1}{m v(t)} - g (\frac{\Delta h}{d} + C_\text{rr}) - \frac{1}{2 m} \rho C_\text{d}A {v(t)}^2 = \dot{v(t)}
 $$
+
+a solution to this non-linear differential equation can be approximated using numerical algorithms.
 
 
 ### Nomenclature
 #### Variables
- * $v_{k-1}$: velocity when entering the segment
- * $v_k$: velocity when leaving the segment
+ * $v(t)$: velocity
  * $d$: distance of the segment
- * $t$: Time required for the segment
  * $\Delta h$: difference in altitude in the segment
  * $P$: Power
- * $W$: Work
 
 #### Parameters
  * $\rho$: Air Density
- * $CdA$: Effective frontal area (frontal area times coefficient of drag)
- * $Crr$: Coefficient of rolling resistance
+ * $C_\text{d}A$: Effective frontal area (frontal area times coefficient of drag)
+ * $C_\text{rr}$: Coefficient of rolling resistance
  * $m$: System mass
  * $g$: Gravitational constant
 

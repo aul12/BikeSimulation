@@ -1,8 +1,14 @@
-import math
-import sympy
+from enum import Enum
+
+from .SqrtWrapper import sqrt
+
+
+class Solver(Enum):
+    SHOOTING = 1,
 
 
 class Simulation:
+
     def __init__(self, ds: list, delta_hs: list):
         assert len(ds) == len(delta_hs)
         self.ds = ds
@@ -12,20 +18,41 @@ class Simulation:
         self.Ps = []
         self.ts = []
 
-    def get_velocity(self, last_velocity, P, d, delta_h, params):
+    def get_acceleration(self, v, P, d: float, delta_h: float, params: dict):
         rho = params["rho"]
         CdA = params["CdA"]
         Crr = params["Crr"]
         m = params["m"]
         g = params["g"]
 
-        arg = -2 * g * delta_h + last_velocity ** 2 - 1 / m * rho * last_velocity ** 2 * CdA * d - 2 * g * Crr + P * 2 * d / (
-                m * last_velocity)
+        return P / (m * v) - g * (delta_h / d + Crr) - 1 / (2 * m) * rho * CdA * v ** 2
 
-        if isinstance(arg, sympy.Expr):
-            return sympy.sqrt(arg)
+    def get_velocity(self, last_velocity, P, d: float, delta_h: float, params: dict, solver=Solver.SHOOTING):
+        if solver == Solver.SHOOTING:
+            acceleration = self.get_acceleration(last_velocity, P, d, delta_h, params)
+
+            # Physics:
+            #      s = v_0 * t + 0.5 * a * t^2
+            #
+            # Quadratic equation with:
+            #      A = 0.5 * a
+            #      B = v_0
+            #      C = -s
+            #
+            #      t = (-v_0 +- sqrt(v_0^2 + 2 * s * a)) / a
+            # If a > 0 the sqrt is larger than v_0, thus the only possible solution is ...+sqrt()
+            #
+            # For a < 0 the sqrt is less than v_0 as the rider decelerates, gets to the distance, overshoots and
+            # drives back, thus we select the smaller time which is also ...+sqrt()
+            #
+            # Notes regarding the argument of the sqrt: if we stop (and reverse) before travelling the given distance
+            # the solution becomes useless.
+            #
+
+            t = (-last_velocity + sqrt(last_velocity ** 2 + 2 * d * acceleration)) / acceleration
+            return last_velocity + acceleration * t
         else:
-            return math.sqrt(arg)
+            raise "Unknown solver!"
 
     def forward(self, Ps: list, params: dict, initial_velocity=5):
         assert len(Ps) == len(self.ds)
