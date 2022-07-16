@@ -25,7 +25,7 @@ def main():
     parser.add_argument("--elevation_smooth_std_dev", dest="elevation_smooth_std_dev", type=float,
                         help="Standard deviation of the kernel used for elevation smoothing", default=50)
     parser.add_argument("--initial_velocity", dest="init_vel", type=float,
-                        help="Initial velocity (in m/s), needs to be positive", default=5)
+                        help="Initial velocity (in km/h), needs to be positive", default=30)
     parser.add_argument("--max_iterations", dest="max_iterations", type=int,
                         help="Maximum optimizer iterations", default=100)
     parser.add_argument("--power_tolerance", dest="power_tolerance", type=float,
@@ -47,11 +47,17 @@ def main():
     ds, delta_hs = ElevationSmoothing.smooth_truncated_gaussian(ds, delta_hs, width=args.elevation_smooth_window,
                                                                 sigma=args.elevation_smooth_std_dev)
 
-    init_velocity = args.init_vel
+    init_velocity = args.init_vel / 3.6
     assert init_velocity > 0
 
+    sim_solver = Simulation.Solver.TIME_EULER
+    sim_solver_params = {"distance_euler_step_size": 1,
+                         "time_euler_step_size": 0.1,
+                         "min_time_euler_step_size": 0.01}
+
     sim = Simulation.Simulation(ds, delta_hs)
-    sim.forward([args.power] * len(ds), initial_velocity=init_velocity, params=params)
+    sim.forward([args.power] * len(ds), initial_velocity=init_velocity, params=params, solver=sim_solver,
+                solver_params=sim_solver_params)
     last_time = sim.get_total_time()
     print(f"[Step 0]\tTotal time:\t\t{datetime.timedelta(seconds=int(last_time))}", end="")
 
@@ -59,7 +65,8 @@ def main():
     #   v_{t+1} = f(v_t, P_t)
     # State cost = t = d/v_t, Control Cost = 0
     v_t, P_t, d_t, delta_h_t = sympy.symbols("v_t, P_t, d_t, delta_h_t")
-    f = sim.get_velocity(v_t, P_t, d_t, delta_h_t, params)
+    f = sim.get_velocity(last_velocity=v_t, P=P_t, d=d_t, delta_h=delta_h_t, params=params,
+                         solver=Simulation.Solver.DIRECT_SHOOTING)
     a_t_sym = f.diff(v_t)
     b_t_sym = f.diff(P_t)
 
@@ -67,6 +74,11 @@ def main():
     q_t_sym = state_cost_sym.diff(v_t)
 
     for c in range(args.max_iterations):
+        # Run once with direct shooting to have an appropriate over power for solver for step
+        if sim_solver != Simulation.Solver.DIRECT_SHOOTING:
+            sim.forward([args.power] * len(ds), initial_velocity=init_velocity, params=params,
+                        solver=Simulation.Solver.DIRECT_SHOOTING)
+
         # Back pass
         cost = float(q_t_sym.evalf(subs={
             v_t: sim.vs[-1],
@@ -75,7 +87,6 @@ def main():
             delta_h_t: delta_hs[-1]
         }))
         steps = [0] * len(ds)
-
         for i in range(len(ds)):
             t = len(ds) - i - 1
 
@@ -100,20 +111,31 @@ def main():
 
         for alpha_exp in range(-10, 6):
             alpha = 10 ** alpha_exp
+
+            # Apply step
             for t in range(len(ds)):
                 sim.Ps[t] = min(max(old_Ps[t] + alpha * steps[t], 0), args.max_power)
-            sim.forward(sim.Ps, params, initial_velocity=init_velocity)
 
+            # Reforward to get average (depends on time for each segment)
+            sim.forward(sim.Ps, params, initial_velocity=init_velocity, solver=sim_solver,
+                        solver_params=sim_solver_params)
+
+            # Rescale average
             power_scale = args.power / sim.get_average_power()
             for t in range(len(ds)):
                 sim.Ps[t] *= power_scale
-            sim.forward(sim.Ps, params, initial_velocity=init_velocity)
+
+            # Reforward to recompute velocity
+            sim.forward(sim.Ps, params, initial_velocity=init_velocity, solver=sim_solver,
+                        solver_params=sim_solver_params)
 
             if sim.get_total_time() < best_time:
                 best_time = sim.get_total_time()
                 best_powers = copy.deepcopy(sim.Ps)
 
-        sim.forward(copy.deepcopy(best_powers), params=params)
+        # Update internal state of sim...
+        sim.forward(copy.deepcopy(best_powers), params=params, solver=sim_solver, solver_params=sim_solver_params,
+                    initial_velocity=init_velocity)
 
         if abs(sim.get_total_time() - last_time) < args.time_tolerance \
                 and sim.get_average_power() < args.power + args.power_tolerance:
@@ -134,7 +156,8 @@ def main():
         print(f"{sim.ts[t]:.1f}s ({sim.ds[t]:.0f}m) at {sim.Ps[t]:.0f}W ({sim.delta_hs[t] / sim.ds[t] * 100:.1f}%, "
               f"{sim.vs[t] * 3.6:.1f}km/h)")
 
-    sim.plot(show_speed=True, show_power=True, show_elevation=True)
+    sim.plot(show_speed=True, show_power=True, show_elevation=True, show_average_power=True,
+             title=f"Optimal pacing for {args.file}")
 
 
 if __name__ == "__main__":
