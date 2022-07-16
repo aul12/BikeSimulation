@@ -1,3 +1,4 @@
+import math
 from enum import Enum
 
 import matplotlib.pyplot as plt
@@ -5,7 +6,9 @@ from .SqrtWrapper import sqrt
 
 
 class Solver(Enum):
-    SHOOTING = 1,
+    DIRECT_SHOOTING = 0,
+    DISTANCE_EULER = 1
+    TIME_EULER = 2
 
 
 class Simulation:
@@ -19,19 +22,29 @@ class Simulation:
         self.Ps = []
         self.ts = []
 
-    def get_acceleration(self, v, P, d: float, delta_h: float, params: dict):
+    @staticmethod
+    def get_acceleration(v, P, d: float, delta_h: float, params: dict):
         rho = params["rho"]
         CdA = params["CdA"]
         Crr = params["Crr"]
         m = params["m"]
         g = params["g"]
 
-        return P / (m * v) - g * (delta_h / d + Crr) - 1 / (2 * m) * rho * CdA * v ** 2
+        return P / (m * v) - g * (delta_h / d + Crr) - 1 / (2 * m) * rho * CdA * (v ** 2)
 
-    def get_velocity(self, last_velocity, P, d: float, delta_h: float, params: dict, solver=Solver.SHOOTING):
-        if solver == Solver.SHOOTING:
-            acceleration = self.get_acceleration(last_velocity, P, d, delta_h, params)
+    @staticmethod
+    def get_acceleration_tilde(v, P, d: float, delta_h: float, params: dict):
+        rho = params["rho"]
+        CdA = params["CdA"]
+        Crr = params["Crr"]
+        m = params["m"]
+        g = params["g"]
 
+        return P / (m * v) - g * (delta_h / d + Crr) - 1 / (2 * m) * rho * CdA * (v ** 2)
+
+    @staticmethod
+    def get_time_for_distance_with_linear_acceleration(v_0, a, s):
+        if a != 0:
             # Physics:
             #      s = v_0 * t + 0.5 * a * t^2
             #
@@ -49,13 +62,51 @@ class Simulation:
             # Notes regarding the argument of the sqrt: if we stop (and reverse) before travelling the given distance
             # the solution becomes useless.
             #
-
-            t = (-last_velocity + sqrt(last_velocity ** 2 + 2 * d * acceleration)) / acceleration
-            return last_velocity + acceleration * t
+            return (-v_0 + sqrt(v_0 ** 2 + 2 * s * a)) / a
         else:
-            raise "Unknown solver!"
+            return s / v_0
 
-    def forward(self, Ps: list, params: dict, initial_velocity=5):
+    @staticmethod
+    def get_velocity(last_velocity, P, d: float, delta_h: float, params: dict, solver=Solver.DIRECT_SHOOTING,
+                     solver_params=None):
+        if solver == Solver.DIRECT_SHOOTING:
+            acceleration = Simulation.get_acceleration(last_velocity, P, d, delta_h, params)
+            return last_velocity + acceleration * Simulation.get_time_for_distance_with_linear_acceleration(
+                last_velocity,
+                acceleration, d)
+        elif solver == Solver.DISTANCE_EULER:
+            distance_euler_step_size = solver_params["distance_euler_step_size"]
+            num_steps = math.ceil(d / distance_euler_step_size)
+            velocity = last_velocity
+            for i in range(num_steps):
+                step_size = min(distance_euler_step_size, d - i * distance_euler_step_size)
+                acceleration = Simulation.get_acceleration(velocity, P, step_size, delta_h * (step_size / d), params)
+                velocity += acceleration * Simulation.get_time_for_distance_with_linear_acceleration(velocity,
+                                                                                                     acceleration,
+                                                                                                     step_size)
+
+            return velocity
+        elif solver == Solver.TIME_EULER:
+            time_euler_step_size = solver_params["time_euler_step_size"]
+            min_time_euler_step_size = solver_params["min_time_euler_step_size"]
+            distance = 0
+            velocity = last_velocity
+            while distance < d:
+                acceleration = Simulation.get_acceleration(velocity, P, d, delta_h, params)
+                new_distance = distance + velocity * time_euler_step_size + .5 * acceleration * time_euler_step_size ** 2
+                if new_distance <= d:
+                    velocity += acceleration * time_euler_step_size
+                    distance = new_distance
+                else:
+                    time_euler_step_size /= 2
+                    if time_euler_step_size < min_time_euler_step_size:
+                        break
+
+            return velocity
+        else:
+            raise Exception("Unknown solver!")
+
+    def forward(self, Ps: list, params: dict, initial_velocity=5, solver=Solver.DIRECT_SHOOTING, solver_params=None):
         assert len(Ps) == len(self.ds)
         self.Ps = Ps
         self.vs = [initial_velocity]
@@ -68,7 +119,8 @@ class Simulation:
 
             while True:
                 try:
-                    v = self.get_velocity(self.vs[-1], P, d, delta_h, params)
+                    v = self.get_velocity(last_velocity=self.vs[-1], P=P, d=d, delta_h=delta_h, params=params,
+                                          solver=solver, solver_params=solver_params)
                 except ValueError:
                     # Overpower required
                     self.Ps[i] += 10
@@ -119,13 +171,17 @@ class Simulation:
 
         return vert_pos, vert_neg
 
-    def plot(self, show_speed=False, show_power=False, show_elevation=False):
+    def plot(self, show_speed=False, show_power=False, show_elevation=False,
+             show_average_power=False, title=None):
         xs = [0]
         for x in self.ds:
             xs.append(xs[-1] + x / 1000)
 
-        fig, ax1 = plt.subplots()
+        fig, ax1 = plt.subplots(dpi=200)
         ax2 = ax1.twinx()
+
+        if title is not None:
+            fig.suptitle(title)
 
         assert show_speed or show_power
 
@@ -137,6 +193,8 @@ class Simulation:
         if show_power:
             ax2.plot(xs[1:], self.Ps, color="red")
             ax2.set_ylabel("Power (W)", color="red")
+            if show_average_power:
+                ax2.plot(xs[1:], [self.get_average_power()] * (len(xs) - 1), color="red", linestyle="dotted")
 
         if show_elevation:
             hs = [0]
