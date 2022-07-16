@@ -1,12 +1,15 @@
 # Bike Simulation
+
 Physics based simulation of bike velocity considering climbing, aerodynamics
 and rolling resistance. Enables the calculation of many values:
- * Time/Speed for a given route with given power
- * CdA from a recorded activity
- * Power estimation from a time for a given segment
- * Optimal pacing (requires precise elevation profile)
+
+* Time/Speed for a given route with given power
+* CdA from a recorded activity
+* Power estimation from a time for a given segment
+* Optimal pacing (requires precise elevation profile)
 
 ## Theory
+
 A given route is split into segments (for example between GPX waypoints),
 for every segment a constant gradient is assumed.
 Given the velocity at the beginning of the segment and the power the velocity
@@ -15,6 +18,7 @@ segment and thus the overall time. For the optimal pacing this overall time is m
 to the power, constraining the average power to the desired value.
 
 ### Physics
+
 There are four important losses to consider: climbing, accelerating,
 aerodynamic drag and rolling resistance. All power that is produced is given by the rider, this allows to formulate
 the dynamics using the laws of energy conservation:
@@ -47,7 +51,6 @@ $$
 P_\text{Rider}(t) = P
 $$
 
-
 Combining all the equations from above one arrives at:
 
 $$
@@ -62,18 +65,32 @@ $$
 
 a solution to this non-linear differential equation can be approximated using numerical algorithms.
 
-
 ### Nomenclature
+
 #### Variables
- * $v(t)$: velocity
- * $d$: distance of the segment
- * $\Delta h$: difference in altitude in the segment
- * $P$: Power
+
+* $v(t)$: velocity
+* $d$: distance of the segment
+* $\Delta h$: difference in altitude in the segment
+* $P$: Power
 
 #### Parameters
- * $\rho$: Air Density
- * $C_\text{d}A$: Effective frontal area (frontal area times coefficient of drag)
- * $C_\text{rr}$: Coefficient of rolling resistance
- * $m$: System mass
- * $g$: Gravitational constant
 
+* $\rho$: Air Density
+* $C_\text{d}A$: Effective frontal area (frontal area times coefficient of drag)
+* $C_\text{rr}$: Coefficient of rolling resistance
+* $m$: System mass
+* $g$: Gravitational constant
+
+## CdA Estimation
+
+Using the physics as derived above the CdA and Crr can be estimated from a recorded activity. For every timestep
+the power used for climbing, accelerating and the rolling resistance is calculated. Subtracting this power from the
+power produced by the rider yields the power lost to drag
+
+$$
+P_\text{Rider}(t) - P_\text{Climbing}(t) - P_\text{Accelerating}(t) - P_\text{Roll} = P_\text{Drag}
+$$
+
+over all data points (consisting of velocity and corresponding drag) the CdA can be estimated through a least squares
+fit.
