@@ -8,7 +8,7 @@ import scipy.optimize
 from lib import FitReader, ParamReader
 
 
-def estimate_cda(ds: list, delta_hs: list, Ps: list, ts: list, params):
+def get_data_points(ds: list, delta_hs: list, Ps: list, ts: list, params):
     data_points = []
 
     m = params["m"]
@@ -42,12 +42,10 @@ def main():
     params = ParamReader.read_params(args.params)
 
 
-    segment_initial_vels = []
     segment_ds = []
     segment_delta_hs = []
     segment_Ps = []
     segment_ts = []
-    initial_vel = 5
 
     for file in args.files:
         ds, delta_hs, Ps, ts = FitReader.read_fit(file)
@@ -59,7 +57,6 @@ def main():
                     segment_delta_hs.append([delta_h])
                     segment_Ps.append([P])
                     segment_ts.append([t])
-                    segment_initial_vels.append(initial_vel)
                 else:
                     segment_ds[-1].append(d)
                     segment_delta_hs[-1].append(delta_h)
@@ -67,13 +64,11 @@ def main():
                     segment_ts[-1].append(t)
                 last_was_zero = False
             else:
-                initial_vel = d / t
                 last_was_zero = True
 
     data_points = []
-    for ds, delta_hs, Ps, ts, initial_vel in zip(segment_ds, segment_delta_hs, segment_Ps, segment_ts,
-                                                 segment_initial_vels):
-        data_points += estimate_cda(ds, delta_hs, Ps, ts, params)
+    for ds, delta_hs, Ps, ts in zip(segment_ds, segment_delta_hs, segment_Ps, segment_ts):
+        data_points += get_data_points(ds, delta_hs, Ps, ts, params)
 
     xs = [p[0] for p in data_points]
     ys = [p[1] for p in data_points]
