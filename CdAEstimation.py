@@ -1,37 +1,33 @@
-import datetime
 import argparse
+import math
 
-from lib import FitReader, Simulation, ParamReader
+import matplotlib.pyplot as plt
+import numpy
+import scipy.optimize
+
+from lib import FitReader, ParamReader
 
 
-def estimate_cda(ds: list, delta_hs: list, Ps: list, ts: list, initial_vel: float, params, resolution: float):
-    real_total_time = 0
-    for t in ts:
-        real_total_time += t
+def estimate_cda(ds: list, delta_hs: list, Ps: list, ts: list, params):
+    data_points = []
 
-    sim = Simulation.Simulation(ds, delta_hs)
+    m = params["m"]
+    g = params["g"]
+    Crr = params["Crr"]
 
-    lower_bound = 0
-    upper_bound = 1
+    vs = [d / t for d, t in zip(ds, ts)]
 
-    mid = None
-    while abs(upper_bound - lower_bound) > resolution:
-        mid = (upper_bound + lower_bound) / 2
-        params["CdA"] = mid
+    for t in range(1, len(ds)):
+        P_climbing = m * g * delta_hs[t] / ds[t] * ts[t]
+        a = (vs[t] - vs[t - 1]) / ts[t]
+        P_acceleration = m * vs[t] * a
+        P_roll = m * g * vs[t] * Crr
 
-        sim.forward(Ps, params, initial_velocity=initial_vel)
+        P_drag = Ps[t] - P_climbing - P_acceleration - P_roll
 
-        sim_total_time = 0
-        for t in sim.ts:
-            sim_total_time += t
+        data_points.append((vs[t], P_drag))
 
-        if sim_total_time > real_total_time:
-            # reduce cda
-            upper_bound = mid
-        else:
-            lower_bound = mid
-
-    return mid
+    return data_points
 
 
 def main():
@@ -72,20 +68,31 @@ def main():
             initial_vel = d / t
             last_was_zero = True
 
-    cdas = []
+    data_points = []
     for ds, delta_hs, Ps, ts, initial_vel in zip(segment_ds, segment_delta_hs, segment_Ps, segment_ts,
                                                  segment_initial_vels):
-        cdas.append(estimate_cda(ds, delta_hs, Ps, ts, initial_vel, params, args.resolution))
+        data_points += estimate_cda(ds, delta_hs, Ps, ts, params)
 
+    xs = [p[0] for p in data_points]
+    ys = [p[1] for p in data_points]
 
-    weighted_cda_sum = 0
-    total_sum = 0
-    for i in range(len(cdas)):
-        weighted_cda_sum += cdas[i] * len(segment_Ps[i])
-        total_sum += len(segment_Ps[i])
+    def parasitic_loss(v, CdA):
+        rho = params["rho"]
+        return .5 * rho * v ** 3 * CdA
 
-    cda = weighted_cda_sum / total_sum
-    print(f"{cda}m^2")
+    sol, cov = scipy.optimize.curve_fit(parasitic_loss, xs, ys, p0=[params["CdA"]])
+
+    print(f"CdA: {sol[0]}m^2 (+-{math.sqrt(cov)}m^2)")
+
+    poly_x = numpy.linspace(0, 16, 100)
+    poly_y = parasitic_loss(poly_x, *sol)
+    plt.scatter(xs, ys, label="Data Points")
+    plt.plot(poly_x, poly_y, color="red", label="Fitted curve")
+    plt.legend()
+    plt.xlabel("Velocity (m/s)")
+    plt.ylabel("Drag loss (W)")
+    plt.title("Loss in drag power over the activity")
+    plt.show()
 
 
 if __name__ == "__main__":
