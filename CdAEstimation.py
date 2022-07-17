@@ -32,11 +32,10 @@ def get_data_points(ds: list, delta_hs: list, Ps: list, ts: list, params):
 
 def main():
     parser = argparse.ArgumentParser("Estimate the CdA from a .fit File")
-    parser.add_argument("files", metavar="F", type=str, nargs="+",
+    parser.add_argument("files", type=str, nargs="+",
                         help="The fit files, needs to include distance, power and altitude")
-    parser.add_argument("--params", dest="params", type=str, help="Params file", default="params.json")
-    parser.add_argument("--resolution", dest="resolution", type=float, help="Required resolution of the CdA",
-                        default=0.001)
+    parser.add_argument("--params", dest="params", type=str, default="params.json",
+                        help="Params file, the CdA in the file is used as initial estimate")
     args = parser.parse_args()
 
     params = ParamReader.read_params(args.params)

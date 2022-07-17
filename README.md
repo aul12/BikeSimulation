@@ -7,6 +7,30 @@ and rolling resistance. Enables the calculation of many values:
 * Power estimation from a time for a given segment
 * Optimal pacing
 
+
+## CdA Estimation
+
+Using the physics (see below) the CdA can be estimated from a recorded activity. For every timestep
+the power used for climbing, accelerating and the rolling resistance is calculated. Subtracting this power from the
+power produced by the rider yields the power lost to drag
+
+$$
+P_\text{Rider}(t) - P_\text{Climbing}(t) - P_\text{Accelerating}(t) - P_\text{Roll} = P_\text{Drag}
+$$
+
+over all data points (consisting of velocity and corresponding drag) the CdA can be estimated through a least squares
+fit.
+
+Run `python3 CdAEstimation.py --help` to get more information on the usage of the tool.
+
+## Optimal Pacing
+
+Optimizes the total time for a course for a given average power. For this the pacing strategy is formulated as an 
+optimal control problem with the velocity dynamics as described below. This optimal control problem is solved using
+a model predictive controller based on dynamic gradient descend.
+
+Run `python3 OptimalPacing.py --help` to get more information on the usage of the tool.
+
 ## Theory
 
 A given route is split into segments (for example between GPX waypoints),
@@ -80,16 +104,3 @@ a solution to this non-linear differential equation can be approximated using nu
 * $C_\text{rr}$: Coefficient of rolling resistance
 * $m$: System mass
 * $g$: Gravitational constant
-
-## CdA Estimation
-
-Using the physics as derived above the CdA and Crr can be estimated from a recorded activity. For every timestep
-the power used for climbing, accelerating and the rolling resistance is calculated. Subtracting this power from the
-power produced by the rider yields the power lost to drag
-
-$$
-P_\text{Rider}(t) - P_\text{Climbing}(t) - P_\text{Accelerating}(t) - P_\text{Roll} = P_\text{Drag}
-$$
-
-over all data points (consisting of velocity and corresponding drag) the CdA can be estimated through a least squares
-fit.

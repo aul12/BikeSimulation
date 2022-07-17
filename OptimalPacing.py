@@ -11,8 +11,8 @@ from lib import GpxReader, FitReader, Simulation, ParamReader, RouteNormalizatio
 
 def main():
     parser = argparse.ArgumentParser("Estimate the optimal power profile for a course")
-    parser.add_argument("file", metavar="F", type=str,
-                        help="The gpx file of the course")
+    parser.add_argument("course", type=str,
+                        help="The gpx/fit file of the course")
     parser.add_argument("--params", dest="params", type=str, help="Params file", default="params.json")
     parser.add_argument("--power", dest="power", type=float, help="Average Power (in Watts) for the course",
                         default=300)
@@ -44,10 +44,10 @@ def main():
     args = parser.parse_args()
 
     params = ParamReader.read_params(args.params)
-    if args.file.endswith(".gpx"):
-        ds, delta_hs = GpxReader.read_gpx(args.file)
-    elif args.file.endswith(".fit"):
-        ds, delta_hs, _, _ = FitReader.read_fit(args.file)
+    if args.course.endswith(".gpx"):
+        ds, delta_hs = GpxReader.read_gpx(args.course)
+    elif args.course.endswith(".fit"):
+        ds, delta_hs, _, _ = FitReader.read_fit(args.course)
     else:
         print("Unknown file format!")
         sys.exit(1)
@@ -165,7 +165,7 @@ def main():
               f"{sim.vs[t] * 3.6:.1f}km/h)")
 
     sim.plot(show_speed=True, show_power=True, show_elevation=True, show_average_power=True,
-             title=f"Optimal pacing for {args.file}")
+             title=f"Optimal pacing for {args.course}")
 
 
 if __name__ == "__main__":
