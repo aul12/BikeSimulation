@@ -52,10 +52,6 @@ def smooth_truncated_gaussian(ds: list, delta_hs: list, sigma, width):
             weights[index] = weight
             weight_sum += weight
 
-        # Normalize weights
-        for index, _ in weights.items():
-            weights[index] /= weight_sum
-
         # Update delta_h
         new_delta_h = 0
         for index, weight in weights.items():

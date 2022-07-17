@@ -94,8 +94,13 @@ class Simulation:
             while distance < d:
                 acceleration = Simulation.get_acceleration(velocity, P, d, delta_h, params)
                 new_distance = distance + velocity * time_euler_step_size + .5 * acceleration * time_euler_step_size ** 2
+                new_velocity = velocity + acceleration * time_euler_step_size
+
+                if new_velocity <= 0:
+                    raise ValueError("Overpower required!")
+
                 if new_distance <= d:
-                    velocity += acceleration * time_euler_step_size
+                    velocity = new_velocity
                     distance = new_distance
                 else:
                     time_euler_step_size /= 2
