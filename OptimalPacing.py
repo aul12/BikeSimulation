@@ -19,7 +19,7 @@ def main():
     parser.add_argument("--max_power", dest="max_power", type=float, help="Max Power (in Watts) for the course",
                         default=700)
     parser.add_argument("--segment_len", dest="segment_len", type=float, help="Length of a segment over which constant"
-                                                                              "power is assumed", default=1)
+                                                                              "power is assumed", default=100)
     parser.add_argument("--elevation_smooth_window", dest="elevation_smooth_window", type=float,
                         help="Size of the window used for elevation smoothing", default=50)
     parser.add_argument("--elevation_smooth_std_dev", dest="elevation_smooth_std_dev", type=float,
@@ -27,11 +27,19 @@ def main():
     parser.add_argument("--initial_velocity", dest="init_vel", type=float,
                         help="Initial velocity (in km/h), needs to be positive", default=30)
     parser.add_argument("--max_iterations", dest="max_iterations", type=int,
-                        help="Maximum optimizer iterations", default=100)
+                        help="Maximum optimizer iterations, set to 0 to get time for constant power", default=100)
     parser.add_argument("--power_tolerance", dest="power_tolerance", type=float,
                         help="Maximum deviation from average to accept pacing strategy", default=5)
     parser.add_argument("--time_tolerance", dest="time_tolerance", type=float,
                         help="Improvement in time at which to stop optimization", default=0.5)
+    parser.add_argument("--solver", dest="solver", type=str,
+                        help="Solver to use for dynamics ODE", default="DISTANCE_EULER")
+    parser.add_argument("--distance_euler_step_size", dest="distance_euler_step_size", type=float,
+                        help="Step size for the DISTANCE_EULER solver", default=1)
+    parser.add_argument("--time_euler_step_size", dest="time_euler_step_size", type=float,
+                        help="Step size for the TIME_EULER solver", default=0.1)
+    parser.add_argument("--min_time_euler_step_size", dest="min_time_euler_step_size", type=float,
+                        help="Step size for the TIME_EULER solver at which to stop solving", default=0.01)
 
     args = parser.parse_args()
 
@@ -50,10 +58,10 @@ def main():
     init_velocity = args.init_vel / 3.6
     assert init_velocity > 0
 
-    sim_solver = Simulation.Solver.TIME_EULER
-    sim_solver_params = {"distance_euler_step_size": 1,
-                         "time_euler_step_size": 0.1,
-                         "min_time_euler_step_size": 0.01}
+    sim_solver = Simulation.Solver[args.solver.upper()]
+    sim_solver_params = {"distance_euler_step_size": args.distance_euler_step_size,
+                         "time_euler_step_size": args.time_euler_step_size,
+                         "min_time_euler_step_size": args.min_time_euler_step_size}
 
     sim = Simulation.Simulation(ds, delta_hs)
     sim.forward([args.power] * len(ds), initial_velocity=init_velocity, params=params, solver=sim_solver,
