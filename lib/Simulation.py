@@ -33,16 +33,6 @@ class Simulation:
         return P / (m * v) - g * (delta_h / d + Crr) - 1 / (2 * m) * rho * CdA * (v ** 2)
 
     @staticmethod
-    def get_acceleration_tilde(v, P, d: float, delta_h: float, params: dict):
-        rho = params["rho"]
-        CdA = params["CdA"]
-        Crr = params["Crr"]
-        m = params["m"]
-        g = params["g"]
-
-        return P / (m * v) - g * (delta_h / d + Crr) - 1 / (2 * m) * rho * CdA * (v ** 2)
-
-    @staticmethod
     def get_time_for_distance_with_linear_acceleration(v_0, a, s):
         if a != 0:
             # Physics:
@@ -206,13 +196,17 @@ class Simulation:
             for delta_h in self.delta_hs:
                 hs.append(hs[-1] + delta_h)
 
-            ax = ax1 if show_speed else ax2
-            min_y, max_y = ax.get_ylim()
+            ax = ax1 if not show_speed else ax2
 
-            min_h = min(hs)
-            max_h = max(hs)
+            if show_speed and show_power:
+                min_y, max_y = ax.get_ylim()
 
-            hs = [(h - min_h) / (max_h - min_h) * (max_y - min_y) + min_y for h in hs]
+                min_h = min(hs)
+                max_h = max(hs)
+
+                hs = [(h - min_h) / (max_h - min_h) * (max_y - min_y) + min_y for h in hs]
+            else:
+                ax.set_ylabel("Relative Altitude (m)")
 
             ax.plot(xs, hs, color="gray")
 
