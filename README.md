@@ -61,7 +61,7 @@ P_\text{Accelerating} = m v(t) \dot{v(t)}
 $$
 
 $$
-P_\text{Drag} = \frac{1}{2} \rho {v(t)}^3 C_\text{d}A
+P_\text{Drag} = \frac{1}{2} \rho {v_\text{Air}(t)}^3 C_\text{d}A
 $$
 
 $$
@@ -77,13 +77,13 @@ $$
 Combining all the equations from above one arrives at:
 
 $$
-m g \frac{\Delta h}{d} v(t) + m v(t) \dot{v(t)} + \frac{1}{2} \rho {v(t)}^3 C_\text{d}A + m g C_\text{rr} v(t) = P
+m g \frac{\Delta h}{d} v(t) + m v(t) \dot{v(t)} + \frac{1}{2} \rho {v(t)_\text{Air}}^3 C_\text{d}A + m g C_\text{rr} v(t) = P
 $$
 
 which can be reformulated as
 
 $$
-P \frac{1}{m v(t)} - g (\frac{\Delta h}{d} + C_\text{rr}) - \frac{1}{2 m} \rho C_\text{d}A {v(t)}^2 = \dot{v(t)}
+P \frac{1}{m v(t)} - g (\frac{\Delta h}{d} + C_\text{rr}) - \frac{1}{2 m} \rho C_\text{d}A \frac{{v_\text{Air}(t)}^3}{v(t)} / = \dot{v(t)}
 $$
 
 a solution to this non-linear differential equation can be approximated using numerical algorithms.
