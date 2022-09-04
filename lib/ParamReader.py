@@ -1,4 +1,5 @@
 import json
+import math
 
 
 def read_params(fname):
@@ -13,5 +14,12 @@ def read_params(fname):
     press = root["pressure"] * 100
     r_specific = 8.31446261815324 / 0.0289652
     ret["rho"] = press / (r_specific * temp)
+
+    if "wind" in root:
+        ret["omega"] = root["wind"]["direction"] / 180 * math.pi
+        ret["v_w"] = root["wind"]["speed"] / 3.6
+    else:
+        ret["omega"] = 0
+        ret["v_w"] = 0
 
     return ret

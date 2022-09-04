@@ -1,13 +1,14 @@
 import argparse
 import datetime
+import sys
 
-from lib import GpxReader, Simulation, ParamReader
+from lib import GpxReader, Simulation, ParamReader, FitReader
 
 
 def main():
     parser = argparse.ArgumentParser("Estimate the time required for a course for a fixed power")
-    parser.add_argument("file", metavar="F", type=str,
-                        help="The gpx file of the course")
+    parser.add_argument("course", metavar="F", type=str,
+                        help="The gpx/fit file of the course")
     parser.add_argument("--params", dest="params", type=str, help="Params file", default="params.json")
     parser.add_argument("--resolution", dest="resolution", type=float, help="Required resolution for the power",
                         default=0.001)
@@ -15,9 +16,15 @@ def main():
     args = parser.parse_args()
 
     params = ParamReader.read_params(args.params)
-    ds, delta_hs = GpxReader.read_gpx(args.file)
+    if args.course.endswith(".gpx"):
+        ds, delta_hs, Psis = GpxReader.read_gpx(args.course)
+    elif args.course.endswith(".fit"):
+        ds, delta_hs, Psis, _, _ = FitReader.read_fit(args.course)
+    else:
+        print("Unknown file format!")
+        sys.exit(1)
 
-    sim = Simulation.Simulation(ds, delta_hs)
+    sim = Simulation.Simulation(ds, delta_hs, Psis)
 
     lower_bound = 0
     upper_bound = 2000

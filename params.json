@@ -1,8 +1,12 @@
 {
-  "temperature": 20,
+  "temperature": 14,
   "pressure": 1013.25,
-  "CdA": 0.25,
+  "CdA": 0.23,
   "Crr": 0.002845,
   "m": 71,
-  "g": 9.81
+  "g": 9.81,
+  "wind": {
+    "direction": 270,
+    "speed": 16
+  }
 }

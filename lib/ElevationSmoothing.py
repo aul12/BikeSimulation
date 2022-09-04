@@ -9,7 +9,7 @@ def gaussian_cdf(x, mu, sigma):
     return .5 * (1 + math.erf((x - mu) / (sigma * math.sqrt(2))))
 
 
-def smooth_truncated_gaussian(ds: list, delta_hs: list, sigma, width):
+def smooth_truncated_gaussian(ds: list, delta_hs: list, Psis: list, sigma, width):
     def truncated_gaussian_weight(x, a, b):
         mu = 0
         normalization = gaussian_cdf(mu + b, mu, sigma) - gaussian_cdf(mu - a, mu, sigma)
@@ -58,4 +58,4 @@ def smooth_truncated_gaussian(ds: list, delta_hs: list, sigma, width):
             new_delta_h += delta_hs[index] * weight / weight_sum
         new_delta_hs.append(new_delta_h)
 
-    return ds, new_delta_hs
+    return ds, new_delta_hs, Psis

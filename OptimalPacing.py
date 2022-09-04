@@ -45,15 +45,16 @@ def main():
 
     params = ParamReader.read_params(args.params)
     if args.course.endswith(".gpx"):
-        ds, delta_hs = GpxReader.read_gpx(args.course)
+        ds, delta_hs, Psis = GpxReader.read_gpx(args.course)
     elif args.course.endswith(".fit"):
-        ds, delta_hs, _, _ = FitReader.read_fit(args.course)
+        ds, delta_hs, Psis, _, _ = FitReader.read_fit(args.course)
     else:
         print("Unknown file format!")
         sys.exit(1)
-    ds, delta_hs = RouteNormalization.normalize(ds, delta_hs, segment_len=args.segment_len)
-    ds, delta_hs = ElevationSmoothing.smooth_truncated_gaussian(ds, delta_hs, width=args.elevation_smooth_window,
-                                                                sigma=args.elevation_smooth_std_dev)
+    ds, delta_hs, Psis = RouteNormalization.normalize(ds, delta_hs, Psis, segment_len=args.segment_len)
+    ds, delta_hs, Psis = ElevationSmoothing.smooth_truncated_gaussian(ds, delta_hs, Psis,
+                                                                      width=args.elevation_smooth_window,
+                                                                      sigma=args.elevation_smooth_std_dev)
 
     init_velocity = args.init_vel / 3.6
     assert init_velocity > 0
@@ -63,7 +64,7 @@ def main():
                          "time_euler_step_size": args.time_euler_step_size,
                          "min_time_euler_step_size": args.min_time_euler_step_size}
 
-    sim = Simulation.Simulation(ds, delta_hs)
+    sim = Simulation.Simulation(ds, delta_hs, Psis)
     sim.forward([args.power] * len(ds), initial_velocity=init_velocity, params=params, solver=sim_solver,
                 solver_params=sim_solver_params)
     last_time = sim.get_total_time()
@@ -72,8 +73,8 @@ def main():
     # System description:
     #   v_{t+1} = f(v_t, P_t)
     # State cost = t = d/v_t, Control Cost = 0
-    v_t, P_t, d_t, delta_h_t = sympy.symbols("v_t, P_t, d_t, delta_h_t")
-    f = sim.get_velocity(last_velocity=v_t, P=P_t, d=d_t, delta_h=delta_h_t, params=params,
+    v_t, P_t, d_t, delta_h_t, Psi_t = sympy.symbols("v_t, P_t, d_t, delta_h_t, Psi_t")
+    f = sim.get_velocity(last_velocity=v_t, P=P_t, d=d_t, delta_h=delta_h_t, Psi=Psi_t, params=params,
                          solver=Simulation.Solver.DIRECT_SHOOTING)
     a_t_sym = f.diff(v_t)
     b_t_sym = f.diff(P_t)
@@ -92,7 +93,8 @@ def main():
             v_t: sim.vs[-1],
             P_t: sim.Ps[-1],
             d_t: ds[-1],
-            delta_h_t: delta_hs[-1]
+            delta_h_t: delta_hs[-1],
+            Psi_t: Psis[-1]
         }))
         steps = [0] * len(ds)
         for i in range(len(ds)):
@@ -102,7 +104,8 @@ def main():
                 v_t: sim.vs[t],
                 P_t: sim.Ps[t],
                 d_t: ds[t],
-                delta_h_t: delta_hs[t]
+                delta_h_t: delta_hs[t],
+                Psi_t: Psis[t]
             }
 
             a_t = float(a_t_sym.evalf(subs=bindings))

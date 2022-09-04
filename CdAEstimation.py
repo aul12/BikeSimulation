@@ -42,7 +42,7 @@ def get_mean_cov_from_sigma_pts(pts: list, weights: list):
     return mean, cov
 
 
-def simultaneous_state_paramter_estimation(ds: list, delta_hs: list, Ps: list, ts: list, params,
+def simultaneous_state_paramter_estimation(ds: list, delta_hs: list, Psis: list, Ps: list, ts: list, params,
                                            init_cda=None, init_crr=None):
     vs = [d / t for d, t in zip(ds, ts)]
 
@@ -65,7 +65,7 @@ def simultaneous_state_paramter_estimation(ds: list, delta_hs: list, Ps: list, t
             new_params = copy.deepcopy(params)
             new_params["CdA"] = CdA
             new_params["Crr"] = Crr
-            new_vel = Simulation.Simulation.get_velocity(last_velocity=v, P=P, delta_h=ds[t] * g, d=ds[t],
+            new_vel = Simulation.Simulation.get_velocity(last_velocity=v, P=P, delta_h=ds[t] * g, d=ds[t], Psi=Psis[t],
                                                          params=new_params)
         except ValueError:
             new_vel = 0
@@ -181,22 +181,25 @@ def main():
 
     segment_ds = []
     segment_delta_hs = []
+    segment_Psis = []
     segment_Ps = []
     segment_ts = []
 
     for file in args.files:
-        ds, delta_hs, Ps, ts = FitReader.read_fit(file)
+        ds, delta_hs, Psis, Ps, ts = FitReader.read_fit(file)
         last_was_zero = True
-        for d, delta_h, P, t in zip(ds, delta_hs, Ps, ts):
+        for d, delta_h, Psi, P, t in zip(ds, delta_hs, Psis, Ps, ts):
             if P > 50:
                 if last_was_zero:
                     segment_ds.append([d])
                     segment_delta_hs.append([delta_h])
+                    segment_Psis.append([Psi])
                     segment_Ps.append([P])
                     segment_ts.append([t])
                 else:
                     segment_ds[-1].append(d)
                     segment_delta_hs[-1].append(delta_h)
+                    segment_Psis[-1].append(Psi)
                     segment_Ps[-1].append(P)
                     segment_ts[-1].append(t)
                 last_was_zero = False
@@ -207,7 +210,7 @@ def main():
     Crr = None
     for ds, delta_hs, Ps, ts in zip(segment_ds, segment_delta_hs, segment_Ps, segment_ts):
         if len(ds) > 10:
-            CdA, Crr = simultaneous_state_paramter_estimation(ds, delta_hs, Ps, ts, params, CdA, Crr)
+            CdA, Crr = simultaneous_state_paramter_estimation(ds, delta_hs, Psis, Ps, ts, params, CdA, Crr)
 
 
 if __name__ == "__main__":

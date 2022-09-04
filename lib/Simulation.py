@@ -2,7 +2,7 @@ import math
 from enum import Enum
 
 import matplotlib.pyplot as plt
-from .SqrtWrapper import sqrt
+from .SympyMultiFunctions import sqrt, cos
 
 
 class Solver(Enum):
@@ -13,24 +13,32 @@ class Solver(Enum):
 
 class Simulation:
 
-    def __init__(self, ds: list, delta_hs: list):
+    def __init__(self, ds: list, delta_hs: list, Psis: list):
         assert len(ds) == len(delta_hs)
         self.ds = ds
         self.delta_hs = delta_hs
+        self.Psis = Psis
 
         self.vs = []
         self.Ps = []
         self.ts = []
 
     @staticmethod
-    def get_acceleration(v, P, d: float, delta_h: float, params: dict):
+    def get_acceleration(v, P, d: float, delta_h: float, Psi: float, params: dict):
         rho = params["rho"]
         CdA = params["CdA"]
         Crr = params["Crr"]
         m = params["m"]
         g = params["g"]
+        omega = params["omega"]
+        v_w = params["v_w"]
+        effective_wind_speed = cos(omega - Psi) * v_w
 
-        return P / (m * v) - g * (delta_h / d + Crr) - 1 / (2 * m) * rho * CdA * (v ** 2)
+        #print(f"Winddirection: {omega*180/math.pi:.0f}°\tHeading: {Psi*180/math.pi:.0f}°\tEffective Windspeed {effective_wind_speed*3.6}km/h")
+
+        return P / (m * v) \
+               - g * (delta_h / d + Crr) \
+               - 1 / (2 * m) * rho * CdA * (v - effective_wind_speed) ** 3 / v
 
     @staticmethod
     def get_time_for_distance_with_linear_acceleration(v_0, a, s):
@@ -57,10 +65,10 @@ class Simulation:
             return s / v_0
 
     @staticmethod
-    def get_velocity(last_velocity, P, d: float, delta_h: float, params: dict, solver=Solver.DIRECT_SHOOTING,
-                     solver_params=None):
+    def get_velocity(last_velocity, P, d: float, delta_h: float, Psi: float, params: dict,
+                     solver=Solver.DIRECT_SHOOTING, solver_params=None):
         if solver == Solver.DIRECT_SHOOTING:
-            acceleration = Simulation.get_acceleration(last_velocity, P, d, delta_h, params)
+            acceleration = Simulation.get_acceleration(last_velocity, P, d, delta_h, Psi, params)
             return last_velocity + acceleration * Simulation.get_time_for_distance_with_linear_acceleration(
                 last_velocity,
                 acceleration, d)
@@ -70,7 +78,8 @@ class Simulation:
             velocity = last_velocity
             for i in range(num_steps):
                 step_size = min(distance_euler_step_size, d - i * distance_euler_step_size)
-                acceleration = Simulation.get_acceleration(velocity, P, step_size, delta_h * (step_size / d), params)
+                acceleration = Simulation.get_acceleration(velocity, P, step_size, delta_h * (step_size / d), Psi,
+                                                           params)
                 velocity += acceleration * Simulation.get_time_for_distance_with_linear_acceleration(velocity,
                                                                                                      acceleration,
                                                                                                      step_size)
@@ -82,7 +91,7 @@ class Simulation:
             distance = 0
             velocity = last_velocity
             while distance < d:
-                acceleration = Simulation.get_acceleration(velocity, P, d, delta_h, params)
+                acceleration = Simulation.get_acceleration(velocity, P, d, delta_h, Psi, params)
                 new_distance = distance + velocity * time_euler_step_size + .5 * acceleration * time_euler_step_size ** 2
                 new_velocity = velocity + acceleration * time_euler_step_size
 
@@ -111,10 +120,11 @@ class Simulation:
             delta_h = self.delta_hs[i]
             d = self.ds[i]
             P = self.Ps[i]
+            Psi = self.Psis[i]
 
             while True:
                 try:
-                    v = self.get_velocity(last_velocity=self.vs[-1], P=P, d=d, delta_h=delta_h, params=params,
+                    v = self.get_velocity(last_velocity=self.vs[-1], P=P, d=d, delta_h=delta_h, Psi=Psi, params=params,
                                           solver=solver, solver_params=solver_params)
                 except ValueError:
                     # Overpower required
